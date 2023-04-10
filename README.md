@@ -1,13 +1,11 @@
-# Sample Hardhat Project
+# MCM Protocol draft
 
-This project demonstrates a basic Hardhat use case. It comes with a sample contract, a test for that contract, and a script that deploys that contract.
-
-Try running some of the following tasks:
+# Setup
 
 ```shell
-npx hardhat help
-npx hardhat test
-REPORT_GAS=true npx hardhat test
-npx hardhat node
-npx hardhat run scripts/deploy.js
+npm install
 ```
+
+# Project
+
+Twitter: [@SONIC_DAO](https://twitter.com/SONIC_DAO)
