@@ -55,7 +55,7 @@ contract LicenseManagerMock is ERC721, Ownable {
     function issueLicense(
         bytes32 _copyrightId,
         bytes32 _licenseId
-    ) external payable onlyAdmin(_copyrightId) {
+    ) external payable {
         require(msg.value == licenses[_copyrightId][_licenseId].price, "LicenseManager: wrong price");
         require(_canIssueLicense(_copyrightId, _licenseId), "LicenseManager: can't issue license");
 

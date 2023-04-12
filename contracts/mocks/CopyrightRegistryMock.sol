@@ -4,10 +4,13 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "../interfaces/ILicenseMetadata.sol";
 
 contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
     uint256 public totalSupply;
+
+    ILicenseMetadata public licenseMetadata;
 
     struct Copyright {
         string baseUri;
@@ -120,6 +123,13 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         }
 
         return deletedAuthors;
+    }
+
+    function setLicenseMetadata(
+        bytes32 _copyrightId,
+        string memory _baseUri
+    ) external onlyOwner {
+
     }
 
     /// @dev for frontend
