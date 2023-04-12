@@ -29,7 +29,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard{
         uint256[] memory _shares,
         address[] memory _authors,
         address _admin
-    ) public {
+    ) external {
         require(_authors.length == _shares.length, "PaymentSplitter: payees and shares length mismatch");
         require(_authors.length > 0, "PaymentSplitter: no payees");
         
@@ -47,7 +47,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard{
         uint256 _tokenId,
         uint256[] memory _shares,
         address[] memory _authors
-    ) public onlyAdmin(_tokenId) {
+    ) external onlyAdmin(_tokenId) {
         require(_authors.length > 0, "PaymentSplitter: no payees");
 
         copyrights[_tokenId].shares = _shares;
@@ -58,7 +58,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard{
     function _minter(
         address[] memory to,
         address _admin
-    ) internal{
+    ) internal {
         for (uint256 i = 0; i < to.length; i++) {
             _safeMint(_admin, totalSupply++);
             _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?
