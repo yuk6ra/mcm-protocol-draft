@@ -19,10 +19,10 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard{
     /// @dev tokenId => copyright id: copyright id is equal to tokenId, this time we use tokenId as a key
     // mapping (uint256 => bytes32) public copyrightIds;
 
-    /// @dev 
+    /// @dev token id => copyright data
     mapping (uint256 => Copyright) public copyrights;
 
-    constructor() ERC721("Rights NFT", "CR") {}
+    constructor() ERC721("CopyrightRegistryMock", "CRM") {}
 
     function copyrightRegistry(        
         string memory _baseUri, /// @dev base uri for token
@@ -40,7 +40,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard{
             admin: _admin
         });
 
-        _minter(_authors);
+        _minter(_authors, _admin);
     }
 
     function setAuthors(
@@ -52,18 +52,17 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard{
 
         copyrights[_tokenId].shares = _shares;
         copyrights[_tokenId].authors = _authors;
-
-        
-
+        // _minter(_authors, msg.sender);
     }
 
     function _minter(
-        address[] memory to
+        address[] memory to,
+        address _admin
     ) internal{
         for (uint256 i = 0; i < to.length; i++) {
-            _safeMint(to[i], totalSupply);
+            _safeMint(_admin, totalSupply++);
+            _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?
         }
-        totalSupply++;        
     }
 
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
@@ -84,7 +83,6 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard{
         require(isAdmin(_tokenId), "CopyrightRegistry: Only admin can call this function");
         _;
     }
-
 
     function burn(uint256 tokenId) public {
         require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721Burnable: caller is not owner nor approved");
