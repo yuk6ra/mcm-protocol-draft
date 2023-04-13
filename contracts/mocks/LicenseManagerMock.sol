@@ -183,6 +183,10 @@ contract LicenseManagerMock is ERC721, Ownable {
         return licenseIdsByTokenId[_tokenId];
     }
 
+    function getLicenseIdsByCopyrightId(bytes32 _copyrightId) external view returns (bytes32[] memory) {
+        return licenseIdsByCopyrightId[_copyrightId];
+    }
+
     /// @dev Only author can call this function
     modifier onlyAdmin(bytes32 _copyrightId) {
         require(copyrightRegistry.getAdmin(_copyrightId) == msg.sender, "LicenseManager: only admin");
