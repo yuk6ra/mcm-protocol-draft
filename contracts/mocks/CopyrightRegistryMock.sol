@@ -8,16 +8,18 @@ import "../interfaces/ILicenseMetadata.sol";
 
 contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
-    uint256 public totalSupply;
+    uint256 public totalSupply; /// @dev total supply of copyrights NFT
+    uint256 public copyrightSupply; /// @dev total supply of copyrights
 
     ILicenseMetadata public licenseMetadata;
 
     struct Copyright {
         uint256 registrationDate;
+        uint256 licenseSupply; /// @dev total supply of licenses
         string baseUri;
         address admin;
         uint256[] shares;
-        address[] authors; /// @dev array of authors addresses        
+        address[] authors; /// @dev array of authors addresses
     }
 
     /// @dev copyright id => copyright data
@@ -42,10 +44,11 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         require(_admin != address(0), ": admin is the zero address");
         require(bytes(_baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
 
-        bytes32 copyrightId = generateCopyrightId(totalSupply);
+        bytes32 copyrightId = generateCopyrightId(copyrightSupply);
 
         copyrights[copyrightId] = Copyright({
             registrationDate: block.timestamp,
+            licenseSupply: 0,
             baseUri: _baseUri,
             admin: _admin,
             shares: _shares,
@@ -104,6 +107,8 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
             _safeMint(to[i], totalSupply++);
             // _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?            
         }
+
+        copyrightSupply++;
     }
 
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
@@ -164,9 +169,9 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         return copyrights[_copyrightId].admin;
     }
 
-    function getAuthors(bytes32 _copyrightId) public view returns (uint256[] memory shares, address[] memory authors) {
+    function getAuthors(bytes32 _copyrightId) public view returns (address[] memory authors, uint256[] memory shares) {
         Copyright memory c = copyrights[_copyrightId];
-        return (c.shares, c.authors);
+        return (c.authors, c.shares);
     }
 
     function getBaseUri(bytes32 _copyrightId) public view returns (string memory) {
