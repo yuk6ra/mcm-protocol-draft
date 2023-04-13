@@ -13,20 +13,21 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     ILicenseMetadata public licenseMetadata;
 
     struct Copyright {
+        // uint256 registrationDate;
         string baseUri;
         address admin;
         uint256[] shares;
-        address[] authors; /// @dev array of authors addresses
+        address[] authors; /// @dev array of authors addresses        
     }
 
-    /// @dev token id => copyright data
+    /// @dev copyright id => copyright data
     mapping (bytes32 => Copyright) public copyrights;
 
     /// @dev tokenId => copyright id: copyright id is equal to tokenId, this time we use tokenId as a key
     mapping (uint256 => bytes32) public copyrightIds;
 
     /// @dev author address => token ids
-    mapping (address => uint256[]) public authorTokens;
+    // mapping (address => uint256[]) public authorTokens;
 
     constructor() ERC721("CopyrightRegistryMock", "CRM") {}
 
@@ -57,7 +58,6 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     ) external nonReentrant onlyAdmin(_copyrightId) {
         require(_authors.length > 0, "PaymentSplitter: no payees");
 
-
         _minter(_copyrightId, _authors, copyrights[_copyrightId].admin);
 
         /// @dev delete authors, burn tokens
@@ -73,6 +73,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
     }
 
+
     function _minter(
         bytes32 _copyrightId,
         address[] memory to,
@@ -80,8 +81,8 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     ) internal {
         for (uint256 i = 0; i < to.length; i++) {
             copyrightIds[totalSupply] = _copyrightId;
-            _safeMint(_admin, totalSupply++);
-            _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?            
+            _safeMint(to[i], totalSupply++);
+            // _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?            
         }
     }
 
@@ -131,6 +132,9 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     ) external onlyOwner {
 
     }
+
+    /// @dev set functions
+    // function setCopyright
 
     /// @dev for frontend
     function getAdmin(bytes32 _copyrightId) public view returns (address) {

@@ -13,21 +13,36 @@ contract LicenseManagerMock is ERC721, Ownable {
 
     constructor(
         address _copyrightRegistryAddress
-    ) ERC721("TreatyMinterMock", "TMM") {
+    ) ERC721("LicenseManagerMock", "LMM") {
         copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress);        
     }
 
     struct License {
-        bytes32 id; /// @dev license id
         uint256 price; /// @dev price in wei
         uint256 duration; /// @dev duration in seconds
         uint256 maxQuantity; /// @dev max quantity of licenses, 0 - unlimited
         uint256 localSupply; /// @dev local supply of licenses
         string baseUri; /// @dev base uri for token
+        bytes32 copyrightId;
     }
 
-    /// @dev copyright id => license id => license data
-    mapping (bytes32 => mapping (bytes32 => License)) public licenses;
+    /// @dev for license NFT
+    /// @dev token id => license id
+    mapping (uint256 => bytes32) public licenseIds;
+
+    /// @dev for license NFT
+    /// @dev license id => license data
+    mapping (bytes32 => License) public licenses;
+
+    /// @dev for Test, copyright id => license id => license data
+    // mapping (bytes32 => mapping (bytes32 => License)) public licenses;
+
+    /// @dev copyright id => license ids
+    mapping (bytes32 => bytes32[]) public licenseIdsByCopyrightId;
+
+    /// @dev if copyright id is in License struct, this mapping is not needed
+    /// @dev license id => copyright id
+    // mapping (bytes32 => bytes32) public copyrightIdsByLicenseId;
 
     /// @dev Register license
     function licenseRegistry(
@@ -40,7 +55,6 @@ contract LicenseManagerMock is ERC721, Ownable {
     ) external onlyAdmin(_copyrightId) {
 
         License memory license = License({
-            id: _licenseId,
             price: _price,
             duration: _duration,
             maxQuantity: _maxQuantity,
@@ -48,7 +62,9 @@ contract LicenseManagerMock is ERC721, Ownable {
             baseUri: _baseUri
         });
 
-        licenses[_copyrightId][_licenseId] = license;
+        licenses[_licenseId] = license;
+        licenseIdsByCopyrightId[_copyrightId].push(_licenseId);
+        copyrightIdsByLicenseId[_licenseId] = _copyrightId;
     }
 
     /// @dev Issue license
@@ -61,8 +77,16 @@ contract LicenseManagerMock is ERC721, Ownable {
 
         _safeMint(msg.sender, totalSupply++);
         licenses[_copyrightId][_licenseId].localSupply++;
+        
     }
 
+    function tokenURI(
+        uint256 tokenId
+    ) public view override returns (string memory) {
+        return licenses[licenseIds[_tokenId]].baseUri;
+    }
+
+    /// @dev Check if license can be issued
     function _canIssueLicense(
         bytes32 _copyrightId,
         bytes32 _licenseId
@@ -71,10 +95,53 @@ contract LicenseManagerMock is ERC721, Ownable {
         return license.maxQuantity == 0 || license.localSupply < license.maxQuantity;
     }
 
+function getAllLicenses() public view returns (License[] memory) {
+    uint256 numLicenses = 0;
+    bytes32[] memory keys = new bytes32[](licenseIds.length);
+
+    for (uint256 i = 0; i < licenseIds.length; i++) {
+        bytes32 key = licenseIds[i];
+        if (licenses[key].registrationDate != 0) {
+            keys[numLicenses] = key;
+            numLicenses++;
+        }
+    }
+
+    License[] memory allLicenses = new License[](numLicenses);
+
+    for (uint256 i = 0; i < numLicenses; i++) {
+        bytes32 key = keys[i];
+        allLicenses[i] = licenses[key];
+    }
+
+    return allLicenses;
+}
+
+    // function _minter(
+    //     bytes32 _copyrightId,
+    //     address[] memory _authors,
+    //     address _admin
+    // ) internal {
+    //     uint256 tokenId = totalSupply++;
+    //     _safeMint(_admin, tokenId);
+        
+    // }
+
+    // function getLicenseId(
+    //     bytes32 _copyrightId,
+    //     bytes32 _licenseId
+    // ) external view returns (License memory) {
+    //     return 
+    // }
+
     /// @dev Only author can call this function
     modifier onlyAdmin(bytes32 _copyrightId) {
         require(copyrightRegistry.getAdmin(_copyrightId) == msg.sender, "LicenseManager: only admin");
         _;
+    }
+
+    function setCopyrightRegistry(address _copyrightRegistryAddress) external onlyOwner {
+        copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress);
     }
 
 }
