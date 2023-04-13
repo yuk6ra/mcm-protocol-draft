@@ -3,9 +3,14 @@ pragma solidity ^0.8.18;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/ILicenseManager.sol";
 import "./CopyrightRegistryMock.sol";
 
-contract LicenseManagerMock is ERC721, Ownable {
+contract LicenseManagerMock is 
+    ILicenseManager,
+    ERC721,
+    Ownable
+{
 
     uint256 public totalSupply;
 
@@ -83,7 +88,8 @@ contract LicenseManagerMock is ERC721, Ownable {
 
         licenses[_licenseId] = license;
         licenseIdsByCopyrightId[_copyrightId].push(_licenseId);
-        copyrightRegistry.copyrights[_copyrightId].licenseSupply++;
+
+        copyrightRegistry.copyrights(_copyrightId).licenseSupply++;
     }
 
     /// @dev Issue license
@@ -124,7 +130,7 @@ contract LicenseManagerMock is ERC721, Ownable {
     ) public view override returns (string memory) {
 
         if (block.timestamp > licenses[licenseIdOf(tokenId)].duration + licenseMetadata[tokenId].issueDate
-            && license[licenseIdOf(tokenId)].duration != 0            
+            && licenses[licenseIdOf(tokenId)].duration != 0            
         ) {
             return expireUri;
         }
@@ -177,9 +183,15 @@ contract LicenseManagerMock is ERC721, Ownable {
     //     return 
     // }
 
+    function getLicense(
+        bytes32 _licenseId
+    ) external view returns (License memory) {
+        return licenses[_licenseId];
+    }
+
     function licenseIdOf(
         uint256 _tokenId
-    ) external view returns (bytes32) {
+    ) public view returns (bytes32) {
         return licenseIdsByTokenId[_tokenId];
     }
 

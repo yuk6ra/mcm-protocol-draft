@@ -4,14 +4,20 @@ pragma solidity ^0.8.18;
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "../interfaces/ILicenseMetadata.sol";
+import "../interfaces/ICopyrightRegistry.sol";
+// import "../interfaces/ILicenseMetadata.sol";
 
-contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
+contract CopyrightRegistryMock is 
+    ICopyrightRegistry,
+    ERC721,
+    Ownable,
+    ReentrancyGuard   
+{
 
     uint256 public totalSupply; /// @dev total supply of copyrights NFT
     uint256 public copyrightSupply; /// @dev total supply of copyrights
 
-    ILicenseMetadata public licenseMetadata;
+    // ILicenseMetadata public licenseMetadata;
 
     struct Copyright {
         uint256 registrationDate;
@@ -55,18 +61,20 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
             authors: _authors
         });
         
-        _minter(copyrightId, _authors, _admin);
+        _minter(copyrightId, _authors);
+        // _minter(copyrightId, _authors, _admin);
     }
 
 
-    function setAuthors(
+    function updateAuthors(
         bytes32 _copyrightId,
         uint256[] memory _shares,
         address[] memory _authors
     ) external onlyAdmin(_copyrightId) {
         require(_authors.length > 0, "PaymentSplitter: no payees");
 
-        _minter(_copyrightId, _authors, copyrights[_copyrightId].admin);
+        _minter(_copyrightId, _authors);
+        // _minter(_copyrightId, _authors, copyrights[_copyrightId].admin);
 
         /// @dev delete authors, burn tokens
         address[] memory deletedAuthors = _getDeletedAuthors(_copyrightId, _authors);
@@ -99,8 +107,8 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
     function _minter(
         bytes32 _copyrightId,
-        address[] memory to,
-        address _admin
+        address[] memory to
+        // address _admin
     ) internal {
         for (uint256 i = 0; i < to.length; i++) {
             copyrightIdsByTokenId[totalSupply] = _copyrightId;
