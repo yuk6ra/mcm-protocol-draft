@@ -4,9 +4,9 @@ require("@nomicfoundation/hardhat-toolbox");
 module.exports = {
   solidity: "0.8.18",
   networks: {
-    goerli: {
-      url: process.env.ALCHEMY_KEY,
-      accounts: [process.env.PRIVATE_KEY],
-    },
+    // goerli: {
+    //   url: process.env.ALCHEMY_KEY,
+    //   accounts: [process.env.PRIVATE_KEY],
+    // },
   },
 };
