@@ -11,6 +11,8 @@ contract LicenseManagerMock is ERC721, Ownable {
 
     CopyrightRegistryMock public copyrightRegistry;
 
+    address public splitterAddress;
+
     constructor(
         address _copyrightRegistryAddress
     ) ERC721("LicenseManagerMock", "LMM") {
@@ -23,7 +25,7 @@ contract LicenseManagerMock is ERC721, Ownable {
         uint256 maxQuantity; /// @dev max quantity of licenses, 0 - unlimited
         uint256 localSupply; /// @dev local supply of licenses
         string baseUri; /// @dev base uri for token
-        bytes32 copyrightId;
+        bytes32 copyrightId; /// @dev copyright id
     }
 
     /// @dev for license NFT
@@ -64,7 +66,6 @@ contract LicenseManagerMock is ERC721, Ownable {
 
         licenses[_licenseId] = license;
         licenseIdsByCopyrightId[_copyrightId].push(_licenseId);
-        copyrightIdsByLicenseId[_licenseId] = _copyrightId;
     }
 
     /// @dev Issue license
@@ -72,19 +73,32 @@ contract LicenseManagerMock is ERC721, Ownable {
         bytes32 _copyrightId,
         bytes32 _licenseId
     ) external payable {
-        require(msg.value == licenses[_copyrightId][_licenseId].price, "LicenseManager: wrong price");
         require(_canIssueLicense(_copyrightId, _licenseId), "LicenseManager: can't issue license");
+        require(msg.value == licenses[_copyrightId][_licenseId].price, "LicenseManager: wrong price");
 
         _safeMint(msg.sender, totalSupply++);
         licenses[_copyrightId][_licenseId].localSupply++;
-        
+        splitterAddress.transfer(msg.value);
     }
 
-    function tokenURI(
-        uint256 tokenId
-    ) public view override returns (string memory) {
-        return licenses[licenseIds[_tokenId]].baseUri;
-    }
+    /// @dev for RoyaltySplitter
+    function setSplitterAddress(
+        address _splitterAddress
+    ) external onlyOwner {
+        require(_splitterAddress != address(0), "LicenseManager: splitter address is the zero address");
+        splitterAddress = _splitterAddress;
+    }        
+
+    // function deleteLicense(
+    //     bytes32 _licenseId
+    // ) external onlyAdmin(licenses[_licenseId].copyrightId) {
+    // }
+
+    // function tokenURI(
+    //     uint256 tokenId
+    // ) public view override returns (string memory) {
+    //     return licenses[licenseIds[_tokenId]].baseUri;
+    // }
 
     /// @dev Check if license can be issued
     function _canIssueLicense(
@@ -95,27 +109,33 @@ contract LicenseManagerMock is ERC721, Ownable {
         return license.maxQuantity == 0 || license.localSupply < license.maxQuantity;
     }
 
-function getAllLicenses() public view returns (License[] memory) {
-    uint256 numLicenses = 0;
-    bytes32[] memory keys = new bytes32[](licenseIds.length);
+    function getCopyrightIdByLicenseId(
+        bytes32 _licenseId
+    ) external view returns (bytes32) {
+        return licenses[_licenseId].copyrightId;
+    }
 
-    for (uint256 i = 0; i < licenseIds.length; i++) {
-        bytes32 key = licenseIds[i];
-        if (licenses[key].registrationDate != 0) {
-            keys[numLicenses] = key;
-            numLicenses++;
+    function getAllLicenses() public view returns (License[] memory) {
+        uint256 numLicenses = 0;
+        bytes32[] memory keys = new bytes32[](licenseIds.length);
+
+        for (uint256 i = 0; i < licenseIds.length; i++) {
+            bytes32 key = licenseIds[i];
+            if (licenses[key].registrationDate != 0) {
+                keys[numLicenses] = key;
+                numLicenses++;
+            }
         }
+
+        License[] memory allLicenses = new License[](numLicenses);
+
+        for (uint256 i = 0; i < numLicenses; i++) {
+            bytes32 key = keys[i];
+            allLicenses[i] = licenses[key];
+        }
+
+        return allLicenses;
     }
-
-    License[] memory allLicenses = new License[](numLicenses);
-
-    for (uint256 i = 0; i < numLicenses; i++) {
-        bytes32 key = keys[i];
-        allLicenses[i] = licenses[key];
-    }
-
-    return allLicenses;
-}
 
     // function _minter(
     //     bytes32 _copyrightId,
