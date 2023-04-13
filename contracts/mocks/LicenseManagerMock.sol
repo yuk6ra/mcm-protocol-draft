@@ -25,7 +25,7 @@ contract LicenseManagerMock is ERC721, Ownable {
         uint256 price; /// @dev price in wei
         uint256 duration; /// @dev duration in seconds
         uint256 maxQuantity; /// @dev max quantity of licenses, 0 - unlimited
-        uint256 localSupply; /// @dev local supply of licenses
+        uint256 totalSupply; /// @dev local supply of licenses
         string baseUri; /// @dev base uri for token
         bytes32 copyrightId; /// @dev copyright id
     }
@@ -35,7 +35,7 @@ contract LicenseManagerMock is ERC721, Ownable {
         // string description;
         // string image;
         // string externalUrl;
-        uint256 issueDate;
+        uint256 issueDate; /// @dev issue date in seconds
     }
 
     /// @dev for license NFT
@@ -46,6 +46,7 @@ contract LicenseManagerMock is ERC721, Ownable {
     /// @dev license id => license data
     mapping (bytes32 => License) public licenses;
 
+    /// @dev license id => license metadata
     mapping (uint256 => LicenseMetadata) public licenseMetadata;
 
     /// @dev for Test, copyright id => license id => license data
@@ -54,12 +55,15 @@ contract LicenseManagerMock is ERC721, Ownable {
     /// @dev copyright id => license ids
     mapping (bytes32 => bytes32[]) public licenseIdsByCopyrightId;
 
+    /// @dev for Test, license id => token ids
+    // mapping (bytes32 => uint256[]) public tokenIdsByLicenseId;
+    
     /// @dev if copyright id is in License struct, this mapping is not needed
     /// @dev license id => copyright id
     // mapping (bytes32 => bytes32) public copyrightIdsByLicenseId;
 
     /// @dev Register license
-    function licenseRegistry(
+    function registerLicense(
         bytes32 _copyrightId,
         bytes32 _licenseId,
         uint256 _price,
@@ -72,13 +76,14 @@ contract LicenseManagerMock is ERC721, Ownable {
             price: _price,
             duration: _duration,
             maxQuantity: _maxQuantity,
-            localSupply: 0,
+            totalSupply: 0,
             baseUri: _baseUri,
             copyrightId: _copyrightId
         });
 
         licenses[_licenseId] = license;
         licenseIdsByCopyrightId[_copyrightId].push(_licenseId);
+        copyrightRegistry.copyrights[_copyrightId].licenseSupply++;
     }
 
     /// @dev Issue license
@@ -92,10 +97,12 @@ contract LicenseManagerMock is ERC721, Ownable {
         require(msg.value == licenses[_licenseId].price, "LicenseManager: wrong price");
 
         _safeMint(msg.sender, totalSupply);
-        licenses[_licenseId].localSupply++;
         licenseIdsByTokenId[totalSupply] = _licenseId;
-        // splitterAddress.transfer(msg.value);
+        licenseMetadata[totalSupply].issueDate = block.timestamp;
 
+        splitterAddress.transfer(msg.value);
+
+        licenses[_licenseId].totalSupply++;
         totalSupply++;
     }
 
@@ -116,8 +123,8 @@ contract LicenseManagerMock is ERC721, Ownable {
         uint256 tokenId
     ) public view override returns (string memory) {
 
-        if (block.timestamp > licenses[licenseIdOf(tokenId)].duration + 
-            
+        if (block.timestamp > licenses[licenseIdOf(tokenId)].duration + licenseMetadata[tokenId].issueDate
+            && license[licenseIdOf(tokenId)].duration != 0            
         ) {
             return expireUri;
         }
