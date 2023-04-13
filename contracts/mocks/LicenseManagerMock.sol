@@ -30,7 +30,7 @@ contract LicenseManagerMock is ERC721, Ownable {
 
     /// @dev for license NFT
     /// @dev token id => license id
-    mapping (uint256 => bytes32) public licenseIds;
+    mapping (uint256 => bytes32) public licenseIdsByTokenId;
 
     /// @dev for license NFT
     /// @dev license id => license data
@@ -61,7 +61,8 @@ contract LicenseManagerMock is ERC721, Ownable {
             duration: _duration,
             maxQuantity: _maxQuantity,
             localSupply: 0,
-            baseUri: _baseUri
+            baseUri: _baseUri,
+            copyrightId: _copyrightId
         });
 
         licenses[_licenseId] = license;
@@ -73,12 +74,17 @@ contract LicenseManagerMock is ERC721, Ownable {
         bytes32 _copyrightId,
         bytes32 _licenseId
     ) external payable {
+        require(copyrightRegistry.copyrightIdExists(_copyrightId), "LicenseManager: copyright id doesn't exist");
+        require(licenseIdExists(_licenseId), "LicenseManager: license id doesn't exist");
         require(_canIssueLicense(_copyrightId, _licenseId), "LicenseManager: can't issue license");
-        require(msg.value == licenses[_copyrightId][_licenseId].price, "LicenseManager: wrong price");
+        require(msg.value == licenses[_licenseId].price, "LicenseManager: wrong price");
 
-        _safeMint(msg.sender, totalSupply++);
-        licenses[_copyrightId][_licenseId].localSupply++;
-        splitterAddress.transfer(msg.value);
+        _safeMint(msg.sender, totalSupply);
+        licenses[_licenseId].localSupply++;
+        licenseIdsByTokenId[totalSupply] = _licenseId;
+        // splitterAddress.transfer(msg.value);
+
+        totalSupply++;
     }
 
     /// @dev for RoyaltySplitter
@@ -94,19 +100,26 @@ contract LicenseManagerMock is ERC721, Ownable {
     // ) external onlyAdmin(licenses[_licenseId].copyrightId) {
     // }
 
-    // function tokenURI(
-    //     uint256 tokenId
-    // ) public view override returns (string memory) {
-    //     return licenses[licenseIds[_tokenId]].baseUri;
-    // }
+    function tokenURI(
+        uint256 tokenId
+    ) public view override returns (string memory) {
+        return licenses[licenseIdsByTokenId[tokenId]].baseUri;
+    }
 
     /// @dev Check if license can be issued
     function _canIssueLicense(
         bytes32 _copyrightId,
         bytes32 _licenseId
     ) internal view returns (bool) {
-        License memory license = licenses[_copyrightId][_licenseId];
+        License memory license = licenses[_copyrightId];
         return license.maxQuantity == 0 || license.localSupply < license.maxQuantity;
+    }
+
+    function getLicenseId(
+        uint256 _number,
+        bytes32 _copyrightId
+    ) external pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_number, _copyrightId));
     }
 
     function getCopyrightIdByLicenseId(
@@ -114,27 +127,11 @@ contract LicenseManagerMock is ERC721, Ownable {
     ) external view returns (bytes32) {
         return licenses[_licenseId].copyrightId;
     }
-
-    function getAllLicenses() public view returns (License[] memory) {
-        uint256 numLicenses = 0;
-        bytes32[] memory keys = new bytes32[](licenseIds.length);
-
-        for (uint256 i = 0; i < licenseIds.length; i++) {
-            bytes32 key = licenseIds[i];
-            if (licenses[key].registrationDate != 0) {
-                keys[numLicenses] = key;
-                numLicenses++;
-            }
-        }
-
-        License[] memory allLicenses = new License[](numLicenses);
-
-        for (uint256 i = 0; i < numLicenses; i++) {
-            bytes32 key = keys[i];
-            allLicenses[i] = licenses[key];
-        }
-
-        return allLicenses;
+    
+    function licenseIdExists(
+        bytes32 _licenseId
+    ) public view returns (bool) {
+        return licenses[_licenseId].copyrightId != bytes32(0);
     }
 
     // function _minter(

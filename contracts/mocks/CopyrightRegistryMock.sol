@@ -13,7 +13,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     ILicenseMetadata public licenseMetadata;
 
     struct Copyright {
-        // uint256 registrationDate;
+        uint256 registrationDate;
         string baseUri;
         address admin;
         uint256[] shares;
@@ -24,7 +24,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     mapping (bytes32 => Copyright) public copyrights;
 
     /// @dev tokenId => copyright id: copyright id is equal to tokenId, this time we use tokenId as a key
-    mapping (uint256 => bytes32) public copyrightIds;
+    mapping (uint256 => bytes32) public copyrightIdsByTokenId;
 
     /// @dev author address => token ids
     // mapping (address => uint256[]) public authorTokens;
@@ -32,7 +32,6 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     constructor() ERC721("CopyrightRegistryMock", "CRM") {}
 
     function copyrightRegistry(
-        bytes32 _copyrightId,
         string memory _baseUri, /// @dev base uri for token
         address _admin,
         uint256[] memory _shares,
@@ -40,15 +39,19 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     ) external nonReentrant {
         require(_authors.length == _shares.length, "PaymentSplitter: payees and shares length mismatch");
         require(_authors.length > 0, "PaymentSplitter: no payees");
+        require(_admin != address(0), ": admin is the zero address");
 
-        copyrights[_copyrightId] = Copyright({
+        bytes32 copyrightId = getCopyrightId(totalSupply);
+
+        copyrights[copyrightId] = Copyright({
+            registrationDate: block.timestamp,
             baseUri: _baseUri,
             admin: _admin,
             shares: _shares,
             authors: _authors
         });
         
-        _minter(_copyrightId, _authors, _admin);
+        _minter(copyrightId, _authors, _admin);
     }
 
     function setAuthors(
@@ -80,7 +83,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         address _admin
     ) internal {
         for (uint256 i = 0; i < to.length; i++) {
-            copyrightIds[totalSupply] = _copyrightId;
+            copyrightIdsByTokenId[totalSupply] = _copyrightId;
             _safeMint(to[i], totalSupply++);
             // _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?            
         }
@@ -89,7 +92,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "CopyrightRegistry: Nonexistent token");
 
-        string memory baseUri = copyrights[copyrightIds[tokenId]].baseUri;
+        string memory baseUri = copyrights[copyrightIdsByTokenId[tokenId]].baseUri;
         require(bytes(baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
 
         /// @dev ""
@@ -126,6 +129,10 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         return deletedAuthors;
     }
 
+    function getCopyrightId(uint256 _input) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked(_input));
+    }
+
     function setLicenseMetadata(
         bytes32 _copyrightId,
         string memory _baseUri
@@ -151,6 +158,10 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
     function getBaseUri(bytes32 _copyrightId) public view returns (string memory) {
         return copyrights[_copyrightId].baseUri;
+    }
+
+    function copyrightIdExists(bytes32 _copyrightId) public view returns (bool) {
+        return copyrights[_copyrightId].registrationDate > 0;
     }
 
     function isAdmin(bytes32 _copyrightId) public view returns (bool) {
