@@ -31,7 +31,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
     constructor() ERC721("CopyrightRegistryMock", "CRM") {}
 
-    function copyrightRegistry(
+    function registerCopyright(
         string memory _baseUri, /// @dev base uri for token
         address _admin,
         uint256[] memory _shares,
@@ -40,8 +40,9 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         require(_authors.length == _shares.length, "PaymentSplitter: payees and shares length mismatch");
         require(_authors.length > 0, "PaymentSplitter: no payees");
         require(_admin != address(0), ": admin is the zero address");
+        require(bytes(_baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
 
-        bytes32 copyrightId = getCopyrightId(totalSupply);
+        bytes32 copyrightId = generateCopyrightId(totalSupply);
 
         copyrights[copyrightId] = Copyright({
             registrationDate: block.timestamp,
@@ -54,11 +55,12 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         _minter(copyrightId, _authors, _admin);
     }
 
+
     function setAuthors(
         bytes32 _copyrightId,
         uint256[] memory _shares,
         address[] memory _authors
-    ) external nonReentrant onlyAdmin(_copyrightId) {
+    ) external onlyAdmin(_copyrightId) {
         require(_authors.length > 0, "PaymentSplitter: no payees");
 
         _minter(_copyrightId, _authors, copyrights[_copyrightId].admin);
@@ -73,9 +75,24 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
         copyrights[_copyrightId].shares = _shares;
         copyrights[_copyrightId].authors = _authors;
-
     }
 
+    function setAdmin(
+        bytes32 _copyrightId,
+        address _admin
+    ) external onlyAdmin(_copyrightId) {
+        require(_admin != msg.sender, ": admin is the sender address");
+        require(_admin != address(0), ": admin is the zero address");
+        copyrights[_copyrightId].admin = _admin;
+    }
+
+    function setBaseUri(
+        bytes32 _copyrightId,
+        string memory _baseUri
+    ) external onlyAdmin(_copyrightId) {
+        require(bytes(_baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
+        copyrights[_copyrightId].baseUri = _baseUri;
+    }
 
     function _minter(
         bytes32 _copyrightId,
@@ -92,7 +109,7 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         require(_exists(tokenId), "CopyrightRegistry: Nonexistent token");
 
-        string memory baseUri = copyrights[copyrightIdsByTokenId[tokenId]].baseUri;
+        string memory baseUri = copyrights[copyrightIdOf(tokenId)].baseUri;
         require(bytes(baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
 
         /// @dev ""
@@ -129,10 +146,11 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
         return deletedAuthors;
     }
 
-    function getCopyrightId(uint256 _input) public pure returns (bytes32) {
+    function generateCopyrightId(uint256 _input) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(_input));
     }
 
+    /// @dev set functions
     function setLicenseMetadata(
         bytes32 _copyrightId,
         string memory _baseUri
@@ -140,24 +158,27 @@ contract CopyrightRegistryMock is ERC721, Ownable, ReentrancyGuard {
 
     }
 
-    /// @dev set functions
-    // function setCopyright
 
     /// @dev for frontend
     function getAdmin(bytes32 _copyrightId) public view returns (address) {
         return copyrights[_copyrightId].admin;
     }
 
-    function getShares(bytes32 _copyrightId) public view returns (uint256[] memory) {
-        return copyrights[_copyrightId].shares;
-    }
-
-    function getAuthors(bytes32 _copyrightId) public view returns (address[] memory) {
-        return copyrights[_copyrightId].authors;
+    function getAuthors(bytes32 _copyrightId) public view returns (uint256[] memory shares, address[] memory authors) {
+        Copyright memory c = copyrights[_copyrightId];
+        return (c.shares, c.authors);
     }
 
     function getBaseUri(bytes32 _copyrightId) public view returns (string memory) {
         return copyrights[_copyrightId].baseUri;
+    }
+
+    function getCopyright(bytes32 _copyrightId) public view returns (Copyright memory) {
+        return copyrights[_copyrightId];
+    }
+
+    function copyrightIdOf(uint256 _tokenId) public view returns (bytes32) {
+        return copyrightIdsByTokenId[_tokenId];
     }
 
     function copyrightIdExists(bytes32 _copyrightId) public view returns (bool) {
