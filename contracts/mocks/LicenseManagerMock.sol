@@ -9,6 +9,8 @@ contract LicenseManagerMock is ERC721, Ownable {
 
     uint256 public totalSupply;
 
+    string public expireUri;
+
     CopyrightRegistryMock public copyrightRegistry;
 
     address public splitterAddress;
@@ -28,6 +30,14 @@ contract LicenseManagerMock is ERC721, Ownable {
         bytes32 copyrightId; /// @dev copyright id
     }
 
+    struct LicenseMetadata {
+        // string name;
+        // string description;
+        // string image;
+        // string externalUrl;
+        uint256 issueDate;
+    }
+
     /// @dev for license NFT
     /// @dev token id => license id
     mapping (uint256 => bytes32) public licenseIdsByTokenId;
@@ -35,6 +45,8 @@ contract LicenseManagerMock is ERC721, Ownable {
     /// @dev for license NFT
     /// @dev license id => license data
     mapping (bytes32 => License) public licenses;
+
+    mapping (uint256 => LicenseMetadata) public licenseMetadata;
 
     /// @dev for Test, copyright id => license id => license data
     // mapping (bytes32 => mapping (bytes32 => License)) public licenses;
@@ -103,7 +115,14 @@ contract LicenseManagerMock is ERC721, Ownable {
     function tokenURI(
         uint256 tokenId
     ) public view override returns (string memory) {
-        return licenses[licenseIdsByTokenId[tokenId]].baseUri;
+
+        if (block.timestamp > licenses[licenseIdOf(tokenId)].duration + 
+            
+        ) {
+            return expireUri;
+        }
+        
+        return licenses[licenseIdOf(tokenId)].baseUri;
     }
 
     /// @dev Check if license can be issued
@@ -115,7 +134,7 @@ contract LicenseManagerMock is ERC721, Ownable {
         return license.maxQuantity == 0 || license.localSupply < license.maxQuantity;
     }
 
-    function getLicenseId(
+    function generateLicenseId(
         uint256 _number,
         bytes32 _copyrightId
     ) external pure returns (bytes32) {
@@ -127,7 +146,7 @@ contract LicenseManagerMock is ERC721, Ownable {
     ) external view returns (bytes32) {
         return licenses[_licenseId].copyrightId;
     }
-    
+
     function licenseIdExists(
         bytes32 _licenseId
     ) public view returns (bool) {
@@ -151,14 +170,24 @@ contract LicenseManagerMock is ERC721, Ownable {
     //     return 
     // }
 
+    function licenseIdOf(
+        uint256 _tokenId
+    ) external view returns (bytes32) {
+        return licenseIdsByTokenId[_tokenId];
+    }
+
     /// @dev Only author can call this function
     modifier onlyAdmin(bytes32 _copyrightId) {
         require(copyrightRegistry.getAdmin(_copyrightId) == msg.sender, "LicenseManager: only admin");
         _;
     }
 
-    function setCopyrightRegistry(address _copyrightRegistryAddress) external onlyOwner {
+    function setCopyrightRegistryAddress(address _copyrightRegistryAddress) external onlyOwner {
         copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress);
+    }
+
+    function setExpireUri(string memory _expireUri) external onlyOwner {
+        expireUri = _expireUri;
     }
 
 }
