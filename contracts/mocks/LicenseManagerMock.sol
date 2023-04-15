@@ -89,7 +89,7 @@ contract LicenseManagerMock is
         licenses[_licenseId] = license;
         licenseIdsByCopyrightId[_copyrightId].push(_licenseId);
 
-        copyrightRegistry.copyrights(_copyrightId).licenseSupply++;
+        // copyrightRegistry.copyrights(_copyrightId).licenseSupply++;
     }
 
     /// @dev Issue license
@@ -106,7 +106,7 @@ contract LicenseManagerMock is
         licenseIdsByTokenId[totalSupply] = _licenseId;
         licenseMetadata[totalSupply].issueDate = block.timestamp;
 
-        splitterAddress.transfer(msg.value);
+        payable(splitterAddress).transfer(msg.value);
 
         licenses[_licenseId].totalSupply++;
         totalSupply++;
@@ -144,7 +144,8 @@ contract LicenseManagerMock is
         bytes32 _licenseId
     ) internal view returns (bool) {
         License memory license = licenses[_copyrightId];
-        return license.maxQuantity == 0 || license.localSupply < license.maxQuantity;
+        // return license.maxQuantity == 0 || license.localSupply < license.maxQuantity;
+        return license.maxQuantity == 0;
     }
 
     function generateLicenseId(

@@ -2,7 +2,7 @@ const { ethers } = require("hardhat");
 
 const copyrightId = ethers.utils.solidityKeccak256(
     ["uint256"],
-    [0]
+    [2]
 )
 console.log("Copyright ID: ", copyrightId);
 
