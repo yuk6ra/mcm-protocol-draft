@@ -238,11 +238,15 @@ contract CopyrightRegistryMock is
         _;
     }
 
-    function setContractAddresses(
-        address _licenseManager,
-        address _royaltySplitter
+    function setLicenseManager(
+        address _licenseManager
     ) external onlyOwner {
         licenseManager = ILicenseManager(_licenseManager);
+    }
+
+    function setRoyaltySplitter(
+        address _royaltySplitter
+    ) external onlyOwner {
         royaltySplitter = IRoyaltySplitter(_royaltySplitter);
     }
 

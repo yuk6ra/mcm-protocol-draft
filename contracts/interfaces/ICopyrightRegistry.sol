@@ -18,5 +18,7 @@ interface ICopyrightRegistry {
     /// @param _input input for generate id => tokenId ?
     /// @return bytes32 id generated from keccak256
     function generateCopyrightId(uint256 _input) external pure returns (bytes32);
+
+    /// @dev ↓
     
 }

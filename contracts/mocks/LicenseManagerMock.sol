@@ -121,7 +121,7 @@ contract LicenseManagerMock is
     }
 
     /// @dev for RoyaltySplitter
-    function setSplitterAddress(
+    function setRoyaltySplitter(
         address _splitterAddress
     ) external onlyOwner {
         require(_splitterAddress != address(0), "LicenseManager: splitter address is the zero address");
