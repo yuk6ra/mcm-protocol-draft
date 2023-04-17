@@ -16,6 +16,7 @@ contract CopyrightRegistryMock is
 
     uint256 public totalSupply; /// @dev total supply of copyrights NFT
     uint256 public copyrightSupply; /// @dev total supply of copyrights
+    address public licenseManager;
 
     // ILicenseMetadata public licenseMetadata;
 
@@ -37,7 +38,11 @@ contract CopyrightRegistryMock is
     /// @dev author address => token ids
     // mapping (address => uint256[]) public authorTokens;
 
-    constructor() ERC721("CopyrightRegistryMock", "CRM") {}
+    constructor(
+        address _licenseManagerAddress
+    ) ERC721("CopyrightRegistryMock", "CRM") {
+        licenseManager = _licenseManagerAddress;
+    }
 
     function registerCopyright(
         string memory _baseUri, /// @dev base uri for token
@@ -171,6 +176,9 @@ contract CopyrightRegistryMock is
 
     }
 
+    function incrementLicenseSupply(bytes32 _copyrightId) external onlyLicenseManager {
+        copyrights[_copyrightId].licenseSupply++;
+    }
 
     /// @dev for frontend
     function getAdmin(bytes32 _copyrightId) public view returns (address) {
@@ -204,6 +212,11 @@ contract CopyrightRegistryMock is
 
     modifier onlyAdmin(bytes32 _copyrightId) {
         require(isAdmin(_copyrightId), "CopyrightRegistry: Only admin can call this function");
+        _;
+    }
+
+    modifier onlyLicenseManager() {
+        require(msg.sender == address(licenseManager), "CopyrightRegistry: Only license manager contract can call this function");
         _;
     }
 

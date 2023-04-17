@@ -14,11 +14,14 @@ contract CustomPushProtocol is Ownable {
 
     bytes public identity;
 
+    // function sendNotification
     function sendIssueNotification(
-        address to
+        address[] calldata toAddresses
     ) external {
-        require(to == address(licenseManagerMock), "CustomPushProtocol: Only PUSHComm can call this function");
-        pushProtocol.sendNotification(channel, to, identity);
+        require(msg.sender == address(licenseManagerMock), "CustomPushProtocol: Only PUSHComm can call this function");
+        for (uint256 i = 0; i < toAddresses.length; i++) {
+            pushProtocol.sendNotification(channel, toAddresses[i], identity);
+        }
     }
 
     function setChannel(address _channel) external onlyOwner {

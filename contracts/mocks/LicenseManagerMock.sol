@@ -91,8 +91,7 @@ contract LicenseManagerMock is
 
         licenses[_licenseId] = license;
         licenseIdsByCopyrightId[_copyrightId].push(_licenseId);
-
-        // copyrightRegistry.copyrights(_copyrightId).licenseSupply++;
+        copyrightRegistry.incrementLicenseSupply(_copyrightId);
     }
 
     /// @dev Issue license
@@ -102,11 +101,12 @@ contract LicenseManagerMock is
     ) external payable {
         require(copyrightRegistry.copyrightIdExists(_copyrightId), "LicenseManager: copyright id doesn't exist");
         require(licenseIdExists(_licenseId), "LicenseManager: license id doesn't exist");
-        require(_canIssueLicense(_copyrightId, _licenseId), "LicenseManager: can't issue license");
+        require(_canIssueLicense(_copyrightId), "LicenseManager: can't issue license");
         require(msg.value == licenses[_licenseId].price, "LicenseManager: wrong price");
         
         if (address(pushProtocol) != address(0)) {
-            pushProtocol.sendIssueNotification(msg.sender);
+            address[] memory authors = copyrightRegistry.getCopyright(_copyrightId).authors;
+            pushProtocol.sendIssueNotification(authors);
         }
 
         _safeMint(msg.sender, totalSupply);
@@ -116,7 +116,7 @@ contract LicenseManagerMock is
         payable(splitterAddress).transfer(msg.value);
 
         licenses[_licenseId].totalSupply++;
-        totalSupply++;
+        totalSupply++;        
     }
 
     /// @dev for RoyaltySplitter
@@ -125,7 +125,7 @@ contract LicenseManagerMock is
     ) external onlyOwner {
         require(_splitterAddress != address(0), "LicenseManager: splitter address is the zero address");
         splitterAddress = _splitterAddress;
-    }        
+    }
 
     // function deleteLicense(
     //     bytes32 _licenseId
@@ -147,12 +147,12 @@ contract LicenseManagerMock is
 
     /// @dev Check if license can be issued
     function _canIssueLicense(
-        bytes32 _copyrightId,
-        bytes32 _licenseId
+        bytes32 _copyrightId
     ) internal view returns (bool) {
-        License memory license = licenses[_copyrightId];
-        // return license.maxQuantity == 0 || license.localSupply < license.maxQuantity;
-        return license.maxQuantity == 0;
+        License memory license = licenses[_copyrightId];        
+
+        return license.maxQuantity == 0 || license.totalSupply <= license.maxQuantity;
+        // return license.maxQuantity == 0;
     }
 
     function generateLicenseId(
