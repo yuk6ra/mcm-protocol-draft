@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ILicenseManager.sol";
 import "./CopyrightRegistryMock.sol";
+import "./CustomPushProtocol.sol";
 
 contract LicenseManagerMock is 
     ILicenseManager,
@@ -17,6 +18,8 @@ contract LicenseManagerMock is
     string public expireUri;
 
     CopyrightRegistryMock public copyrightRegistry;
+
+    CustomPushProtocol public pushProtocol;
 
     address public splitterAddress;
 
@@ -101,6 +104,10 @@ contract LicenseManagerMock is
         require(licenseIdExists(_licenseId), "LicenseManager: license id doesn't exist");
         require(_canIssueLicense(_copyrightId, _licenseId), "LicenseManager: can't issue license");
         require(msg.value == licenses[_licenseId].price, "LicenseManager: wrong price");
+        
+        if (address(pushProtocol) != address(0)) {
+            pushProtocol.sendIssueNotification(msg.sender);
+        }
 
         _safeMint(msg.sender, totalSupply);
         licenseIdsByTokenId[totalSupply] = _licenseId;
@@ -212,6 +219,10 @@ contract LicenseManagerMock is
 
     function setExpireUri(string memory _expireUri) external onlyOwner {
         expireUri = _expireUri;
+    }
+
+    function setCustomPushContract(address _customPushContract) external onlyOwner {
+        pushProtocol = CustomPushProtocol(_customPushContract);
     }
 
 }

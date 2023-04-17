@@ -25,12 +25,13 @@ contract RoyaltySplitterMock {
     ) external payable {
         (address[] memory authors, uint256[] memory shares) = copyrightRegistry.getAuthors(_copyrightId);
 
-        bytes32[] memory licenseIds = licenseManager.getLicenseIdsByCopyrightId(_copyrightId)
+        bytes32[] memory licenseIds = licenseManager.getLicenseIdsByCopyrightId(_copyrightId);
 
         uint256 totalShares = 0;
         for (uint256 i = 0; i < shares.length; i++) {
             totalShares += shares[i];
         }
+
         for (uint256 i = 0; i < authors.length; i++) {
             payable(authors[i]).transfer(msg.value * shares[i] / totalShares);
         }
