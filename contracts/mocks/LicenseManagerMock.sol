@@ -115,8 +115,9 @@ contract LicenseManagerMock is
 
         payable(splitterAddress).transfer(msg.value);
 
+        copyrightRegistry.incrementTotalRevenue(_copyrightId, msg.value);
         licenses[_licenseId].totalSupply++;
-        totalSupply++;        
+        totalSupply++;
     }
 
     /// @dev for RoyaltySplitter
@@ -223,6 +224,10 @@ contract LicenseManagerMock is
 
     function setCustomPushContract(address _customPushContract) external onlyOwner {
         pushProtocol = CustomPushProtocol(_customPushContract);
+    }
+
+    function getRevenueByLicenseId(bytes32 _licenseId) external view returns (uint256) {
+        return licenses[_licenseId].totalSupply * licenses[_licenseId].price;
     }
 
 }

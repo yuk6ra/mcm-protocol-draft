@@ -5,7 +5,8 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../interfaces/ICopyrightRegistry.sol";
-// import "../interfaces/ILicenseMetadata.sol";
+import "../interfaces/ILicenseManager.sol";
+import "../interfaces/IRoyaltySplitter.sol";
 
 contract CopyrightRegistryMock is 
     ICopyrightRegistry,
@@ -16,7 +17,9 @@ contract CopyrightRegistryMock is
 
     uint256 public totalSupply; /// @dev total supply of copyrights NFT
     uint256 public copyrightSupply; /// @dev total supply of copyrights
-    address public licenseManager;
+
+    ILicenseManager public licenseManager;
+    IRoyaltySplitter public royaltySplitter;
 
     // ILicenseMetadata public licenseMetadata;
 
@@ -35,14 +38,16 @@ contract CopyrightRegistryMock is
     /// @dev tokenId => copyright id: copyright id is equal to tokenId, this time we use tokenId as a key
     mapping (uint256 => bytes32) public copyrightIdsByTokenId;
 
+    // p@dev copyright id => released amount
+    mapping (bytes32 => uint256) public releasedRevenue;
+
+    // @dev copyright id => totalRevenue
+    mapping (bytes32 => uint256) public totalRevenue;
+
     /// @dev author address => token ids
     // mapping (address => uint256[]) public authorTokens;
 
-    constructor(
-        address _licenseManagerAddress
-    ) ERC721("CopyrightRegistryMock", "CRM") {
-        licenseManager = _licenseManagerAddress;
-    }
+    constructor() ERC721("CopyrightRegistryMock", "CRM") {}
 
     function registerCopyright(
         string memory _baseUri, /// @dev base uri for token
@@ -180,6 +185,14 @@ contract CopyrightRegistryMock is
         copyrights[_copyrightId].licenseSupply++;
     }
 
+    function incrementReleasedRevenue(bytes32 _copyrightId, uint256 _amount) external onlyRoyaltySplitter {
+        releasedRevenue[_copyrightId] += _amount;
+    }
+
+    function incrementTotalRevenue(bytes32 _copyrightId, uint256 _amount) external onlyLicenseManager {
+        totalRevenue[_copyrightId] += _amount;
+    }
+
     /// @dev for frontend
     function getAdmin(bytes32 _copyrightId) public view returns (address) {
         return copyrights[_copyrightId].admin;
@@ -218,6 +231,19 @@ contract CopyrightRegistryMock is
     modifier onlyLicenseManager() {
         require(msg.sender == address(licenseManager), "CopyrightRegistry: Only license manager contract can call this function");
         _;
+    }
+
+    modifier onlyRoyaltySplitter() {
+        require(msg.sender == address(royaltySplitter), "CopyrightRegistry: Only royalty splitter contract can call this function");
+        _;
+    }
+
+    function setContractAddresses(
+        address _licenseManager,
+        address _royaltySplitter
+    ) external onlyOwner {
+        licenseManager = ILicenseManager(_licenseManager);
+        royaltySplitter = IRoyaltySplitter(_royaltySplitter);
     }
 
     function burn(uint256 tokenId) public {
