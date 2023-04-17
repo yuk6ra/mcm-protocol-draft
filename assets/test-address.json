@@ -1,0 +1,40 @@
+[
+    {
+        "Copyright": [
+            {
+                "id": "0x290decd9548b62a8d60345a988386fc84ba6bc95484008f6362f93160ef3e563",
+                "baseURI": "https://metadata.prtcl.xyz/metadata/copyrights/0.json",
+                "authors": [
+                    {
+                        "A, ADMIN": "0x02D735933FC9E18b1a216E6010AE329e2ee9ef9e"
+                    },
+                    {
+                        "B": "0x7363f7Ab7209330F2f769dAF33a21783997C8f44"
+                    },
+                    {
+                        "C": "0x16eDe9a32225A72E642B2eD60b52F36B5Ec9eFBa"
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "License": [
+            {
+                "id": "0xb7e97e6b4b2c7cd5fb9b51a86ad7eae441872b770b5953443024cb1e0bc6f67d",
+                "baseURI": "https://metadata.prtcl.xyz/metadata/licenses/copyright-0-license-0.json",
+                "authors": [
+                    {
+                        "A": "0x0845D547ffC137CBd2B16babF6201D9e716E358c"
+                    },
+                    {
+                        "B": "0x552743d6E77F37c3AE75e1238519065B14Afea61"
+                    },
+                    {
+                        "C": "0x822013a286292aFe7b07ABb23f0f7A8a99121098"
+                    }
+                ]
+            }
+        ]
+    }
+]
