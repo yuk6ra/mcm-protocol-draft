@@ -261,7 +261,7 @@ contract LicenseManagerMock is ILicenseManager, ERC721, Ownable {
             ,
             address _royaltySplitterAddress
         ) = mcmDraft.getContractAddress();
-        copyrightRegistry = CopyrightRegistryMock(_royaltySplitterAddress); /// @dev must be changed interface
+        copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress); /// @dev must be changed interface
         splitterAddress = _royaltySplitterAddress;
     }
 }

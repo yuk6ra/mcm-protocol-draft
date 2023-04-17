@@ -21,7 +21,7 @@ contract MCMdraft is IMCMDraft, Ownable {
 
     function getContractAddress()
         external
-        pure
+        view
         returns (
             address _copyrightRegistryAddress,
             address _licenseManagerAddress,
@@ -29,9 +29,9 @@ contract MCMdraft is IMCMDraft, Ownable {
         )
     {
         return (
-            _copyrightRegistryAddress,
-            _licenseManagerAddress,
-            _royaltySplitterAddress
+            copyrightRegistryAddress,
+            licenseManagerAddress,
+            royaltySplitterAddress
         );
     }
 }
