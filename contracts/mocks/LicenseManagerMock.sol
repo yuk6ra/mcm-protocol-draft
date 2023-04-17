@@ -6,13 +6,9 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "../interfaces/ILicenseManager.sol";
 import "./CopyrightRegistryMock.sol";
 import "./CustomPushProtocol.sol";
+import "../interfaces/IMCMDraft.sol";
 
-contract LicenseManagerMock is 
-    ILicenseManager,
-    ERC721,
-    Ownable
-{
-
+contract LicenseManagerMock is ILicenseManager, ERC721, Ownable {
     uint256 public totalSupply;
 
     string public expireUri;
@@ -20,13 +16,14 @@ contract LicenseManagerMock is
     CopyrightRegistryMock public copyrightRegistry;
 
     CustomPushProtocol public pushProtocol;
+    IMCMDraft public mcmDraft;
 
     address public splitterAddress;
 
     constructor(
-        address _copyrightRegistryAddress
+        address _mcmDraftAddress
     ) ERC721("LicenseManagerMock", "LMM") {
-        copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress);        
+        mcmDraft = IMCMDraft(_mcmDraftAddress);    
     }
 
     struct License {
@@ -48,24 +45,24 @@ contract LicenseManagerMock is
 
     /// @dev for license NFT
     /// @dev token id => license id
-    mapping (uint256 => bytes32) public licenseIdsByTokenId;
+    mapping(uint256 => bytes32) public licenseIdsByTokenId;
 
     /// @dev for license NFT
     /// @dev license id => license data
-    mapping (bytes32 => License) public licenses;
+    mapping(bytes32 => License) public licenses;
 
     /// @dev license id => license metadata
-    mapping (uint256 => LicenseMetadata) public licenseMetadata;
+    mapping(uint256 => LicenseMetadata) public licenseMetadata;
 
     /// @dev for Test, copyright id => license id => license data
     // mapping (bytes32 => mapping (bytes32 => License)) public licenses;
 
     /// @dev copyright id => license ids
-    mapping (bytes32 => bytes32[]) public licenseIdsByCopyrightId;
+    mapping(bytes32 => bytes32[]) public licenseIdsByCopyrightId;
 
     /// @dev for Test, license id => token ids
     // mapping (bytes32 => uint256[]) public tokenIdsByLicenseId;
-    
+
     /// @dev if copyright id is in License struct, this mapping is not needed
     /// @dev license id => copyright id
     // mapping (bytes32 => bytes32) public copyrightIdsByLicenseId;
@@ -73,13 +70,12 @@ contract LicenseManagerMock is
     /// @dev Register license
     function registerLicense(
         bytes32 _copyrightId,
-        bytes32 _licenseId,
+        // bytes32 _licenseId,
         uint256 _price,
         uint256 _duration,
         uint256 _maxQuantity,
         string memory _baseUri
     ) external onlyAdmin(_copyrightId) {
-
         License memory license = License({
             price: _price,
             duration: _duration,
@@ -89,8 +85,13 @@ contract LicenseManagerMock is
             copyrightId: _copyrightId
         });
 
-        licenses[_licenseId] = license;
-        licenseIdsByCopyrightId[_copyrightId].push(_licenseId);
+        bytes32 licenseId = generateLicenseId(
+            licenseIdsByCopyrightId[_copyrightId].length,
+            _copyrightId
+        );
+
+        licenses[licenseId] = license;
+        licenseIdsByCopyrightId[_copyrightId].push(licenseId);
         copyrightRegistry.incrementLicenseSupply(_copyrightId);
     }
 
@@ -99,13 +100,27 @@ contract LicenseManagerMock is
         bytes32 _copyrightId,
         bytes32 _licenseId
     ) external payable {
-        require(copyrightRegistry.copyrightIdExists(_copyrightId), "LicenseManager: copyright id doesn't exist");
-        require(licenseIdExists(_licenseId), "LicenseManager: license id doesn't exist");
-        require(_canIssueLicense(_copyrightId), "LicenseManager: can't issue license");
-        require(msg.value == licenses[_licenseId].price, "LicenseManager: wrong price");
-        
+        require(
+            copyrightRegistry.copyrightIdExists(_copyrightId),
+            "LicenseManager: copyright id doesn't exist"
+        );
+        require(
+            licenseIdExists(_licenseId),
+            "LicenseManager: license id doesn't exist"
+        );
+        require(
+            _canIssueLicense(_copyrightId),
+            "LicenseManager: can't issue license"
+        );
+        require(
+            msg.value == licenses[_licenseId].price,
+            "LicenseManager: wrong price"
+        );
+
         if (address(pushProtocol) != address(0)) {
-            address[] memory authors = copyrightRegistry.getCopyright(_copyrightId).authors;
+            address[] memory authors = copyrightRegistry
+                .getCopyright(_copyrightId)
+                .authors;
             pushProtocol.sendIssueNotification(authors);
         }
 
@@ -121,10 +136,11 @@ contract LicenseManagerMock is
     }
 
     /// @dev for RoyaltySplitter
-    function setRoyaltySplitter(
-        address _splitterAddress
-    ) external onlyOwner {
-        require(_splitterAddress != address(0), "LicenseManager: splitter address is the zero address");
+    function setRoyaltySplitter(address _splitterAddress) external onlyOwner {
+        require(
+            _splitterAddress != address(0),
+            "LicenseManager: splitter address is the zero address"
+        );
         splitterAddress = _splitterAddress;
     }
 
@@ -136,30 +152,32 @@ contract LicenseManagerMock is
     function tokenURI(
         uint256 tokenId
     ) public view override returns (string memory) {
-
-        if (block.timestamp > licenses[licenseIdOf(tokenId)].duration + licenseMetadata[tokenId].issueDate
-            && licenses[licenseIdOf(tokenId)].duration != 0            
+        if (
+            block.timestamp >
+            licenses[licenseIdOf(tokenId)].duration +
+                licenseMetadata[tokenId].issueDate &&
+            licenses[licenseIdOf(tokenId)].duration != 0
         ) {
             return expireUri;
         }
-        
+
         return licenses[licenseIdOf(tokenId)].baseUri;
     }
 
     /// @dev Check if license can be issued
-    function _canIssueLicense(
-        bytes32 _copyrightId
-    ) internal view returns (bool) {
-        License memory license = licenses[_copyrightId];        
+    function _canIssueLicense(bytes32 _licenseId) internal view returns (bool) {
+        License memory license = licenses[_licenseId];
 
-        return license.maxQuantity == 0 || license.totalSupply <= license.maxQuantity;
+        return
+            license.maxQuantity == 0 ||
+            license.totalSupply <= license.maxQuantity;
         // return license.maxQuantity == 0;
     }
 
     function generateLicenseId(
         uint256 _number,
         bytes32 _copyrightId
-    ) external pure returns (bytes32) {
+    ) public pure returns (bytes32) {
         return keccak256(abi.encodePacked(_number, _copyrightId));
     }
 
@@ -169,9 +187,7 @@ contract LicenseManagerMock is
         return licenses[_licenseId].copyrightId;
     }
 
-    function licenseIdExists(
-        bytes32 _licenseId
-    ) public view returns (bool) {
+    function licenseIdExists(bytes32 _licenseId) public view returns (bool) {
         return licenses[_licenseId].copyrightId != bytes32(0);
     }
 
@@ -182,14 +198,14 @@ contract LicenseManagerMock is
     // ) internal {
     //     uint256 tokenId = totalSupply++;
     //     _safeMint(_admin, tokenId);
-        
+
     // }
 
     // function getLicenseId(
     //     bytes32 _copyrightId,
     //     bytes32 _licenseId
     // ) external view returns (License memory) {
-    //     return 
+    //     return
     // }
 
     function getLicense(
@@ -198,23 +214,28 @@ contract LicenseManagerMock is
         return licenses[_licenseId];
     }
 
-    function licenseIdOf(
-        uint256 _tokenId
-    ) public view returns (bytes32) {
+    function licenseIdOf(uint256 _tokenId) public view returns (bytes32) {
         return licenseIdsByTokenId[_tokenId];
     }
 
-    function getLicenseIdsByCopyrightId(bytes32 _copyrightId) external view returns (bytes32[] memory) {
+    function getLicenseIdsByCopyrightId(
+        bytes32 _copyrightId
+    ) external view returns (bytes32[] memory) {
         return licenseIdsByCopyrightId[_copyrightId];
     }
 
     /// @dev Only author can call this function
     modifier onlyAdmin(bytes32 _copyrightId) {
-        require(copyrightRegistry.getAdmin(_copyrightId) == msg.sender, "LicenseManager: only admin");
+        require(
+            copyrightRegistry.getAdmin(_copyrightId) == msg.sender,
+            "LicenseManager: only admin"
+        );
         _;
     }
 
-    function setCopyrightRegistryAddress(address _copyrightRegistryAddress) external onlyOwner {
+    function setCopyrightRegistryAddress(
+        address _copyrightRegistryAddress
+    ) external onlyOwner {
         copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress);
     }
 
@@ -222,12 +243,25 @@ contract LicenseManagerMock is
         expireUri = _expireUri;
     }
 
-    function setCustomPushContract(address _customPushContract) external onlyOwner {
+    function setCustomPushContract(
+        address _customPushContract
+    ) external onlyOwner {
         pushProtocol = CustomPushProtocol(_customPushContract);
     }
 
-    function getRevenueByLicenseId(bytes32 _licenseId) external view returns (uint256) {
+    function getRevenueByLicenseId(
+        bytes32 _licenseId
+    ) external view returns (uint256) {
         return licenses[_licenseId].totalSupply * licenses[_licenseId].price;
     }
 
+    function setContractAddresses() external onlyOwner {
+        (
+            address _copyrightRegistryAddress,
+            ,
+            address _royaltySplitterAddress
+        ) = mcmDraft.getContractAddress();
+        copyrightRegistry = CopyrightRegistryMock(_royaltySplitterAddress); /// @dev must be changed interface
+        splitterAddress = _royaltySplitterAddress;
+    }
 }

@@ -7,19 +7,20 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../interfaces/ICopyrightRegistry.sol";
 import "../interfaces/ILicenseManager.sol";
 import "../interfaces/IRoyaltySplitter.sol";
+import "../interfaces/IMCMDraft.sol";
 
-contract CopyrightRegistryMock is 
+contract CopyrightRegistryMock is
     ICopyrightRegistry,
     ERC721,
     Ownable,
-    ReentrancyGuard   
+    ReentrancyGuard
 {
-
     uint256 public totalSupply; /// @dev total supply of copyrights NFT
     uint256 public copyrightSupply; /// @dev total supply of copyrights
 
     ILicenseManager public licenseManager;
     IRoyaltySplitter public royaltySplitter;
+    IMCMDraft public mcmDraft;
 
     // ILicenseMetadata public licenseMetadata;
 
@@ -33,21 +34,25 @@ contract CopyrightRegistryMock is
     }
 
     /// @dev copyright id => copyright data
-    mapping (bytes32 => Copyright) public copyrights;
+    mapping(bytes32 => Copyright) public copyrights;
 
     /// @dev tokenId => copyright id: copyright id is equal to tokenId, this time we use tokenId as a key
-    mapping (uint256 => bytes32) public copyrightIdsByTokenId;
+    mapping(uint256 => bytes32) public copyrightIdsByTokenId;
 
     // p@dev copyright id => released amount
-    mapping (bytes32 => uint256) public releasedRevenue;
+    mapping(bytes32 => uint256) public releasedRevenue;
 
     // @dev copyright id => totalRevenue
-    mapping (bytes32 => uint256) public totalRevenue;
+    mapping(bytes32 => uint256) public totalRevenue;
 
     /// @dev author address => token ids
     // mapping (address => uint256[]) public authorTokens;
 
-    constructor() ERC721("CopyrightRegistryMock", "CRM") {}
+    constructor(
+        address _mdmDraftAddress
+    ) ERC721("CopyrightRegistryMock", "CRM") {
+        mcmDraft = IMCMDraft(_mdmDraftAddress);
+    }
 
     function registerCopyright(
         string memory _baseUri, /// @dev base uri for token
@@ -55,10 +60,16 @@ contract CopyrightRegistryMock is
         uint256[] memory _shares,
         address[] memory _authors
     ) external nonReentrant {
-        require(_authors.length == _shares.length, "PaymentSplitter: payees and shares length mismatch");
+        require(
+            _authors.length == _shares.length,
+            "PaymentSplitter: payees and shares length mismatch"
+        );
         require(_authors.length > 0, "PaymentSplitter: no payees");
         require(_admin != address(0), ": admin is the zero address");
-        require(bytes(_baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
+        require(
+            bytes(_baseUri).length > 0,
+            "CopyrightRegistry: Base URI is not set"
+        );
 
         bytes32 copyrightId = generateCopyrightId(copyrightSupply);
 
@@ -70,11 +81,10 @@ contract CopyrightRegistryMock is
             shares: _shares,
             authors: _authors
         });
-        
+
         _minter(copyrightId, _authors);
         // _minter(copyrightId, _authors, _admin);
     }
-
 
     function updateAuthors(
         bytes32 _copyrightId,
@@ -87,7 +97,10 @@ contract CopyrightRegistryMock is
         // _minter(_copyrightId, _authors, copyrights[_copyrightId].admin);
 
         /// @dev delete authors, burn tokens
-        address[] memory deletedAuthors = _getDeletedAuthors(_copyrightId, _authors);
+        address[] memory deletedAuthors = _getDeletedAuthors(
+            _copyrightId,
+            _authors
+        );
         for (uint256 i = 0; i < deletedAuthors.length; i++) {
             if (deletedAuthors[i] != address(0)) {
                 // _burn();
@@ -111,39 +124,46 @@ contract CopyrightRegistryMock is
         bytes32 _copyrightId,
         string memory _baseUri
     ) external onlyAdmin(_copyrightId) {
-        require(bytes(_baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
+        require(
+            bytes(_baseUri).length > 0,
+            "CopyrightRegistry: Base URI is not set"
+        );
         copyrights[_copyrightId].baseUri = _baseUri;
     }
 
     function _minter(
         bytes32 _copyrightId,
         address[] memory to
-        // address _admin
-    ) internal {
+    ) internal // address _admin
+    {
         for (uint256 i = 0; i < to.length; i++) {
             copyrightIdsByTokenId[totalSupply] = _copyrightId;
             _safeMint(to[i], totalSupply++);
-            // _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?            
+            // _safeTransfer(_admin, to[i], totalSupply, ""); /// @dev if to is admin address, ?
         }
 
         copyrightSupply++;
     }
 
-    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
+    function tokenURI(
+        uint256 tokenId
+    ) public view virtual override returns (string memory) {
         require(_exists(tokenId), "CopyrightRegistry: Nonexistent token");
 
         string memory baseUri = copyrights[copyrightIdOf(tokenId)].baseUri;
-        require(bytes(baseUri).length > 0, "CopyrightRegistry: Base URI is not set");
+        require(
+            bytes(baseUri).length > 0,
+            "CopyrightRegistry: Base URI is not set"
+        );
 
         /// @dev ""
         return baseUri;
     }
 
-    function _getDeletedAuthors(bytes32 _copyrightId, address[] memory _authors)
-        internal
-        view
-        returns (address[] memory)
-    {
+    function _getDeletedAuthors(
+        bytes32 _copyrightId,
+        address[] memory _authors
+    ) internal view returns (address[] memory) {
         address[] memory prevAuthors = copyrights[_copyrightId].authors;
         address[] memory deletedAuthors = new address[](prevAuthors.length);
 
@@ -177,19 +197,25 @@ contract CopyrightRegistryMock is
     function setLicenseMetadata(
         bytes32 _copyrightId,
         string memory _baseUri
-    ) external onlyOwner {
+    ) external onlyOwner {}
 
-    }
-
-    function incrementLicenseSupply(bytes32 _copyrightId) external onlyLicenseManager {
+    function incrementLicenseSupply(
+        bytes32 _copyrightId
+    ) external onlyLicenseManager {
         copyrights[_copyrightId].licenseSupply++;
     }
 
-    function incrementReleasedRevenue(bytes32 _copyrightId, uint256 _amount) external onlyRoyaltySplitter {
+    function incrementReleasedRevenue(
+        bytes32 _copyrightId,
+        uint256 _amount
+    ) external onlyRoyaltySplitter {
         releasedRevenue[_copyrightId] += _amount;
     }
 
-    function incrementTotalRevenue(bytes32 _copyrightId, uint256 _amount) external onlyLicenseManager {
+    function incrementTotalRevenue(
+        bytes32 _copyrightId,
+        uint256 _amount
+    ) external onlyLicenseManager {
         totalRevenue[_copyrightId] += _amount;
     }
 
@@ -198,16 +224,22 @@ contract CopyrightRegistryMock is
         return copyrights[_copyrightId].admin;
     }
 
-    function getAuthors(bytes32 _copyrightId) public view returns (address[] memory authors, uint256[] memory shares) {
+    function getAuthors(
+        bytes32 _copyrightId
+    ) public view returns (address[] memory authors, uint256[] memory shares) {
         Copyright memory c = copyrights[_copyrightId];
         return (c.authors, c.shares);
     }
 
-    function getBaseUri(bytes32 _copyrightId) public view returns (string memory) {
+    function getBaseUri(
+        bytes32 _copyrightId
+    ) public view returns (string memory) {
         return copyrights[_copyrightId].baseUri;
     }
 
-    function getCopyright(bytes32 _copyrightId) public view returns (Copyright memory) {
+    function getCopyright(
+        bytes32 _copyrightId
+    ) public view returns (Copyright memory) {
         return copyrights[_copyrightId];
     }
 
@@ -215,7 +247,9 @@ contract CopyrightRegistryMock is
         return copyrightIdsByTokenId[_tokenId];
     }
 
-    function copyrightIdExists(bytes32 _copyrightId) public view returns (bool) {
+    function copyrightIdExists(
+        bytes32 _copyrightId
+    ) public view returns (bool) {
         return copyrights[_copyrightId].registrationDate > 0;
     }
 
@@ -224,35 +258,52 @@ contract CopyrightRegistryMock is
     }
 
     modifier onlyAdmin(bytes32 _copyrightId) {
-        require(isAdmin(_copyrightId), "CopyrightRegistry: Only admin can call this function");
+        require(
+            isAdmin(_copyrightId),
+            "CopyrightRegistry: Only admin can call this function"
+        );
         _;
     }
 
     modifier onlyLicenseManager() {
-        require(msg.sender == address(licenseManager), "CopyrightRegistry: Only license manager contract can call this function");
+        require(
+            msg.sender == address(licenseManager),
+            "CopyrightRegistry: Only license manager contract can call this function"
+        );
         _;
     }
 
     modifier onlyRoyaltySplitter() {
-        require(msg.sender == address(royaltySplitter), "CopyrightRegistry: Only royalty splitter contract can call this function");
+        require(
+            msg.sender == address(royaltySplitter),
+            "CopyrightRegistry: Only royalty splitter contract can call this function"
+        );
         _;
     }
 
-    function setLicenseManager(
-        address _licenseManager
-    ) external onlyOwner {
+    function setLicenseManager(address _licenseManager) external onlyOwner {
         licenseManager = ILicenseManager(_licenseManager);
     }
 
-    function setRoyaltySplitter(
-        address _royaltySplitter
-    ) external onlyOwner {
+    function setRoyaltySplitter(address _royaltySplitter) external onlyOwner {
         royaltySplitter = IRoyaltySplitter(_royaltySplitter);
     }
 
     function burn(uint256 tokenId) public {
-        require(_isApprovedOrOwner(_msgSender(), tokenId), "ERC721Burnable: caller is not owner nor approved");
+        require(
+            _isApprovedOrOwner(_msgSender(), tokenId),
+            "ERC721Burnable: caller is not owner nor approved"
+        );
         _burn(tokenId);
     }
 
+    function setContractAddresses() external onlyOwner {
+        (
+            ,
+            address _licenseManagerAddress,
+            address _royaltySplitterAddress
+        ) = mcmDraft.getContractAddress();
+        licenseManager = ILicenseManager(_licenseManagerAddress);
+        royaltySplitter = IRoyaltySplitter(_royaltySplitterAddress);
+    }
 }

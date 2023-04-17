@@ -5,18 +5,18 @@ pragma solidity ^0.8.18;
 import "./CopyrightRegistryMock.sol";
 import "./LicenseManagerMock.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/IMCMDraft.sol";
 
 contract RoyaltySplitterMock is Ownable{
 
     CopyrightRegistryMock public copyrightRegistry;
     LicenseManagerMock public licenseManager;
+    IMCMDraft public mcmDraft;
 
     constructor(
-        address _copyrightRegistryAddress,
-        address _licenseManagerAddress
+        address _mcmDraftAddress
     ) {
-        copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress);
-        licenseManager = LicenseManagerMock(_licenseManagerAddress);
+        mcmDraft = IMCMDraft(_mcmDraftAddress);
     }
 
     receive() external payable {}
@@ -59,5 +59,16 @@ contract RoyaltySplitterMock is Ownable{
     function setLicenseManager(address _licenseManagerAddress) external onlyOwner {
         licenseManager = LicenseManagerMock(_licenseManagerAddress);
     }
+
+    function setContractAddresses() external onlyOwner {
+        (
+            address _copyrightRegistryAddress,
+            address _licenseManagerAddress,
+
+        ) = mcmDraft.getContractAddress();
+        copyrightRegistry = CopyrightRegistryMock(_copyrightRegistryAddress);
+        licenseManager = LicenseManagerMock(_licenseManagerAddress);
+    }
+
     
 }
